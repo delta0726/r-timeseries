@@ -1,16 +1,16 @@
 # ****************************************************************************
-# BUSINESS SCIENCE UNIVERSITY
-# DS4B 203-R: TIME SERIES FORECASTING FOR BUSINESS
-# MODULE: MODELTIME WORKFLOW FOR FORECASTING
+# Title       : BUSINESS SCIENCE UNIVERSITY
+# Course      : DS4B 203-R: TIME SERIES FORECASTING FOR BUSINESS
+# Module      : Modeltime Workflow（7-1 to 7-7）
+# Created by  : Owner
+# Last Update : 2021/6/26
+# URL         : https://university.business-science.io/
 # ****************************************************************************
 
 
-# ゴール ----
-# {modeltime}の基本ワークフローを理解する
-
-
-# 目的 ----
+# ＜目的＞
 # - Modeltimeのワークフローを理解する
+# - CalibrationやRefitの概念を理解する
 # - モデル精度のメトリックを理解する
 # - 予測ホライズンと信頼区間を理解する
 # - 何故refitをするかを理解する
@@ -20,15 +20,16 @@
 # 0 準備
 # 1 モデル構築
 # 2 モデルテーブルの構築
-# 3 予測（CALIBRATION）
-# 4 モデル精度の検証（TEST ACCURACY）
-# 5 予測結果の確認（TEST FORECAST）
-# 6 リフィッティング(REFITTING)
+# 3 検証準備（Calibration）
+# 4 モデル精度の検証（Test Accuracy）
+# 5 予測結果の確認（Test Forecast）
+# 6 リフィッティング(Refitting)
+# 7 最終予測の作成（Final Forecast）
 
 
 # 0 準備 ------------------------------------------------------------------------------------
 
-# * LIBRARIES ----------------------------------------------------------
+# * ライブラリ -----------------------------------------------------------
 
 # Time Series ML
 library(tidymodels)
@@ -51,14 +52,14 @@ feature_engineering_artifacts_list <-
 data_prepared_tbl <- feature_engineering_artifacts_list$data$data_prepared_tbl
 forecast_tbl      <- feature_engineering_artifacts_list$data$forecast_tbl
 
-# レシピ取得
-recipe_spec_2_lag <- feature_engineering_artifacts_list$recipes$recipe_spec_2
-
 # データ確認
 # --- 1系列の時系列データ（optins_trans）
 # --- 前処理で説明変数を生成している
 data_prepared_tbl %>% glimpse()
 forecast_tbl %>% glimpse()
+
+# レシピ取得
+recipe_spec_2_lag <- feature_engineering_artifacts_list$recipes$recipe_spec_2
 
 
 # * データ分割 ----------------------------------------------------------
@@ -67,7 +68,8 @@ forecast_tbl %>% glimpse()
 # --- 直近がテストデータとなるように分割
 splits <-
   data_prepared_tbl %>%
-    time_series_split(assess = "8 weeks", 
+    time_series_split(date_var = optin_time,
+                      assess = "8 weeks",
                       # initial = "1 year 1 months"
                       cumulative = TRUE)
 
@@ -87,21 +89,36 @@ splits %>%
 # ＜ポイント＞
 # - ParnsipとWorkflowsを用いたモデル構築プロセスを確認
 # - 以下の３つの学習済モデルを作成しておく
-#   --- 1 ARIMAモデル（Parsnip）
-#   --- 2 ARIMAモデル（Workflow & フーリエ変換あり）
-#   --- 3 ElasticNet(GLMNET) + XREGS（Workflow & フルレシピ）
+#   --- 1-1 ARIMAモデル（Parsnip）
+#   --- 1-2 ARIMAモデル（Workflow & フーリエ変換あり）
+#   --- 1-3 ElasticNet(GLMNET) + XREGS（Workflow & フルレシピ）
+
+# ＜参考＞
+# General Interface for ARIMA Regression Models
+# https://business-science.github.io/modeltime/reference/arima_reg.html
 
 
-# * Parsnip Model (ARIMA)  ----------------------------------------------------
-
-# ＜ポイント＞
-# - Parsnipを用いてモデル定義
-#   --- workflowのほうが柔軟性のあるモデル定義が可能(RecipeとModelの分割)
-
+# * 1-0 準備 --------------------------------------------------------------
 
 # データ確認
 # --- 訓練データ
-splits %>% training()
+splits %>%
+  training() %>%
+  select(optins_trans, optin_time)
+
+# プロット確認
+splits %>%
+  training() %>%
+  plot_time_series(.date_var = optin_time,
+                   .value    = optins_trans)
+
+
+# * 1-1 ARIMAモデル（Parsnip） -----------------------------------------------
+
+# ＜ポイント＞
+# - Parsnipを用いてモデル定義
+#   --- workflowのほうが柔軟性のあるモデル定義が可能(レシピとモデルの分割)
+
 
 # モデル構築
 # --- 学習済モデルの構築
@@ -116,10 +133,13 @@ model_fit_arima <-
 model_fit_arima %>% print()
 
 
-# * Workflow (ARIMA + Date Features) ----------------------------------------
+# * 1-2 ARIMAモデル（Workflow & フーリエ変換あり） -------------------------------
 
 # ＜ポイント＞
 # - workflowを用いてモデル定義
+#   --- レシピとモデルを独立して指定することが可能
+#   --- モデルフォーミュラはレシピで記述する
+#   --- モデル構築時点でレシピ適用後のデータセットにしておく必要がない
 
 
 # モデル構築
@@ -139,29 +159,32 @@ recipe_spec_fourier <-
 # --- レシピ適用後
 recipe_spec_fourier %>% prep() %>% juice() %>% glimpse()
 
-# ワークフロー定義
+# ワークフロー定義＆学習
 # --- モデルとレシピを分割して設定
-# --- 学習済モデルの作成（modeltimeに導入する際は学習済モデルのため）
+# --- 学習済モデルの作成（modeltimeテーブルに登録する際は学習済モデルのため）
 workflow_fit_arima <-
   workflow() %>%
     add_recipe(recipe_spec_fourier) %>%
     add_model(model_spec_arima) %>%
-    fit(training(splits))
+    fit(data = training(splits))
 
 # 確認
 workflow_fit_arima %>% print()
 
 
-# * Workflow (GLMNET + XREGS) ----------------------------------------
+# *1-3 ElasticNet(GLMNET) + XREGS（Workflow & フルレシピ）----------------------
 
 # ＜ポイント＞
+# - XREGS(External Regressor)を用いてモデル定義
 # - GLMNETでモデル構築
 # - モデル比較用
 
 
 # レシピ確認
 # --- 6章で作成したレシピ
+# --- フォーミュラ確認(outcome ~ predictor)
 recipe_spec_2_lag %>% print()
+recipe_spec_2_lag$var_info
 
 # データ確認
 recipe_spec_2_lag %>% prep() %>% juice()
@@ -180,7 +203,7 @@ workflow_fit_glmnet <-
   workflow() %>%
     add_recipe(recipe_spec_2_lag) %>%
     add_model(model_spec_glmnet) %>%
-    fit(training(splits))
+    fit(data = training(splits))
 
 # 確認
 workflow_fit_glmnet %>% print()
@@ -190,7 +213,8 @@ workflow_fit_glmnet %>% print()
 
 # ＜ポイント＞
 # - 学習済モデルをテーブルに追加する
-#   --- 複数モデルを同時に実行＆比較するための準備
+#   --- 複数モデルを同時に実行するための準備
+#   --- レシピ/モデル/データを変更してモデル比較することが可能
 
 
 # テーブル構築
@@ -206,14 +230,16 @@ model_tbl <-
 model_tbl %>% print()
 
 
-# 3 予測（CALIBRATION） --------------------------------------------------------------------
+# 3 検証準備（Calibration） -----------------------------------------------------------
 
 # ＜ポイント＞
-# - 学習済みモデルをテストデータに適用して予測精度を検証する（インサンプル検証）
-#   --- 各学習済モデルでのテストデータを用いたモデル評価はまだ行っていない
-# - CALIBRATION(検査)はテストデータにフォーカスしたテーブルが作成される
-#   --- このステップでは全期間の出力は想定していない
+# - CALIBRATION(検査)はテストデータを統一的に適用してモデル評価のデータを準備する
+# - 学習済の各モデルに同一のテストデータを適用して予測値と残差を得る
+#   --- モデル評価はまだ行っていない
 
+
+# データ確認
+splits %>% testing()
 
 # 予測データの作成
 # --- テストデータで作成
@@ -222,17 +248,18 @@ calibration_tbl <-
   model_tbl %>%
     modeltime_calibrate(new_data = testing(splits))
 
-# 確認
+# 確認（テーブル全体）
 # --- データフレーム構造
 calibration_tbl %>% print()
 
-# 確認
-# --- モデル1
-# --- テスト期間の8週間分のデータが格納されている
+# 確認（モデル1）
+# --- テスト期間の56レコードのデータが格納されている（モデル評価に必要なデータ）
+# --- 各モデルを適用して予測値(.prediction)と残差(.residuals)を算出している
+# --- 残差を算出するため正解値(.actual)も格納されてている
 calibration_tbl %>% slice(1) %>% unnest(.calibration_data)
 
 
-# 4 モデル精度の検証（TEST ACCURACY）-------------------------------------------------
+# 4 モデル精度の検証（Test Accuracy）-------------------------------------------------
 
 # ＜ポイント＞
 # - Calculates common accuracy measures
@@ -252,12 +279,6 @@ calibration_tbl %>%
                            bordered = TRUE,
                            resizable = TRUE)
 
-# 参考： メトリックセットの確認
-# --- {yardstick}のメトリックを使っている
-default_forecast_accuracy_metric_set()
-default_forecast_accuracy_metric_set
-?default_forecast_accuracy_metric_set
-
 # メトリックを独自設定
 metric_set(mae, rmse, iic)
 
@@ -265,8 +286,15 @@ metric_set(mae, rmse, iic)
 calibration_tbl %>%
     modeltime_accuracy(metric_set = metric_set(mae, rmse, iic))
 
+# ＜参考＞
+# デフォルト指定のメトリック
+# --- {yardstick}のメトリックを使っている
+default_forecast_accuracy_metric_set()
+default_forecast_accuracy_metric_set
+?default_forecast_accuracy_metric_set
 
-# 5 予測結果の確認（TEST FORECAST）---------------------------------------------------
+
+# 5 予測結果の確認（Test Forecast）---------------------------------------------------
 
 # ＜ポイント＞
 # - 学習済みモデルをテストデータに適用して予測精度を検証する（アウトオブサンプル検証）
@@ -274,88 +302,121 @@ calibration_tbl %>%
 
 # データ期間の確認
 # --- 予測に使用するデータの確認
-# --- ｢全期間｣と｢テスト期間｣のデータ
-data_prepared_tbl %>% tk_index() %>% tk_get_timeseries_summary()
-splits %>% testing() %>% tk_index() %>% tk_get_timeseries_summary()
-
-# レコード数
-data_prepared_tbl %>% nrow()
-splits %>% testing() %>% nrow()
+# --- 全期間/訓練期間/テスト期間の確認（日付確認）
+data_prepared_tbl %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
+splits %>% training() %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
+splits %>% testing() %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
 
 # 予測データの作成
 # --- 全期間の時系列データセットが作成される
+pred_tbl <-
+  calibration_tbl %>%
+      modeltime_forecast(new_data      = testing(splits),
+                         actual_data   = data_prepared_tbl,
+                         conf_interval = 0.80)
+
+# レコード数の確認
 # --- 777レコード（609 + 56 * 3モデル）
-calibration_tbl %>%
-    modeltime_forecast(new_data      = testing(splits),
-                       actual_data   = data_prepared_tbl,
-                       conf_interval = 0.80)
+pred_tbl %>%
+  group_by(.model_desc, .key) %>%
+  tally()
 
 # プロット作成
 # --- 予測データの作成
 # --- プロット
-calibration_tbl %>%
-    modeltime_forecast(new_data      = testing(splits),
-                       actual_data   = data_prepared_tbl,
-                       conf_interval = 0.80) %>%
-    plot_modeltime_forecast(.legend_max_width = 60,
-                            .legend_show = FALSE,
-                            .conf_interval_show = TRUE,
-                            .conf_interval_alpha = 0.20,
-                            .conf_interval_fill = "lightblue",
-                            .title = "Email Subscriber Forecast")
-
-# 参考：データ構造
-# --- 777レコード（609 + 56 * 3モデル）
-calibration_tbl %>%
-    modeltime_forecast(new_data      = testing(splits),
-                       actual_data   = data_prepared_tbl,
-                       conf_interval = 0.80) %>%
-    group_by(.model_desc) %>%
-    tally()
+pred_tbl %>%
+  plot_modeltime_forecast(.legend_max_width = 60,
+                          .legend_show = FALSE,
+                          .conf_interval_show = TRUE,
+                          .conf_interval_alpha = 0.20,
+                          .conf_interval_fill = "lightblue",
+                          .title = "Email Subscriber Forecast")
 
 
 # ヘルプ参照
 ?plot_modeltime_forecast
 
 
-# 6 リフィッティング(REFITTING) ----------------------------------------------------
+# 6 リフィッティング(Refitting) ----------------------------------------------------
 
 # ＜ポイント＞
-# - REFITでは新たなデータセットに対して｢学習｣を行い｢予測結果｣を出力する
-#   --- Automated models (e.g. "auto arima")はパラメータを再計算する
-#   --- Non-automated models (e.g. "arima")は学習済みモデルをそのまま使用する
-#   --- CALIBRATEは予測結果を出力するのみ
-# - REFITを用いると、モデルテーブルのままモデルのアップデートが可能
-#   --- 訓練データ自体が入れ替わると、個別モデルは学習しなおす必要がある
-#   --- 訓練データが同じだとREFITによって一部のプロセスを省略できる
+# - REFITでは新たなデータセットを用いて各モデルの学習とCalibrationを行う
+#   --- モデルテーブルのままモデルのアップデートが可能
+#   --- 新たなモデルでCalibrationが行われる
+#   --- Calibrationに用いるデータは従来定義したものが用いられる（変更可能）
+# - 最終予測のため、検証データを含めてモデルを再定義する
+#   --- 直前までのデータを活用
 
 
 # * Refit ----------------------------------------------------------------
 
 # モデルの再計算
-# --- 全期間のデータを使用
+# --- 全期間のデータを使用（最終予測のため直前までデータを使用して再訓練）
+# --- 以下のメッセージはAuto Arimaを再計算している証拠
+# --- frequency = 7 observations per 1 week
 refit_tbl <-
   calibration_tbl %>%
     modeltime_refit(data = data_prepared_tbl)
 
 
+# ＜参考＞
+# REFITが行っていることを確認
 
-# * Final Forecast --------------------------------------------------------
+# データ準備
+# --- 元のデータの前半/後半に分割
+data_prepared_tbl_head <- data_prepared_tbl %>% head(300)
+data_prepared_tbl_tail <- data_prepared_tbl %>% tail(300)
+
+# 期間の確認
+# --- headには元のモデルの検証期間が含まれていない
+data_prepared_tbl_head %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
+data_prepared_tbl_tail %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
+
+# リフィット
+# --- 新しいデータでテーブルに登録したモデルを再学習
+# --- Calibrateデータも作成されている
+refit_tbl_head <- calibration_tbl %>% modeltime_refit(data = data_prepared_tbl_head)
+refit_tbl_tail <- calibration_tbl %>% modeltime_refit(data = data_prepared_tbl_tail)
+
+# データ確認
+# --- どちらもCalibrateデータの期間は同じ（modeltime_calibrate()で指定したテストデータを使用）
+refit_tbl_head %>% slice(1) %>% unnest(.calibration_data)
+refit_tbl_tail %>% slice(1) %>% unnest(.calibration_data)
+
+# Calibrateの再定義
+# --- テストデータのレコード数を20に変更
+# --- 新たにテストデータを定義すると、｢.calibration_data｣の結果が変わる
+refit_tbl_head %>% modeltime_calibrate(new_data = head(testing(splits), 20))
+refit_tbl_head %>% modeltime_calibrate(new_data = head(testing(splits), 20))
+
+
+# 7 最終予測の作成（Final Forecast） ---------------------------------------------------
 
 # ＜ポイント＞
-# - 'new_data' vs 'h'
-# - 'actual_data'
-# - Preprocessing
+# - リフィットの時点でテスト期間を含めてモデルを再学習済
+# - 学習済モデルに予測期間を適用して最終予測を取得する
 
-# プロット作成
-# --- 予測データの作成
-# --- プロット
-refit_tbl %>%
+
+# 最終モデルのデータ期間
+# --- 学習期間
+# --- 予測期間
+data_prepared_tbl %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
+forecast_tbl %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
+
+# 予測データの作成
+final_tbl <-
+  refit_tbl %>%
     modeltime_forecast(# h = "8 weeks",
                        new_data = forecast_tbl,
                        actual_data = data_prepared_tbl,
-                       conf_interval = 0.80) %>%
-    plot_modeltime_forecast(.legend_max_width = 25,
-                            .conf_interval_fill = "lightblue",
-                            .interactive = TRUE)
+                       conf_interval = 0.80)
 
+# データ確認
+final_tbl %>% print()
+final_tbl %>% group_by(.model_desc, .key) %>% tally()
+
+# プロット作成
+final_tbl %>%
+  plot_modeltime_forecast(.legend_max_width = 25,
+                          .conf_interval_fill = "lightblue",
+                          .interactive = TRUE)
