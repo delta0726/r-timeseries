@@ -1,15 +1,19 @@
 # ****************************************************************************
-# BUSINESS SCIENCE UNIVERSITY
-# DS4B 203-R: TIME SERIES FORECASTING FOR BUSINESS
-# MODULE: NEW FEATURES - MODELTIME 0.1.0
+# Title       : BUSINESS SCIENCE UNIVERSITY
+# Course      : DS4B 203-R: TIME SERIES FORECASTING FOR BUSINESS
+# Module      : NEW FEATURES - MODELTIME 0.1.0 （7-8 to 7-9）
+# Created by  : Owner
+# Last Update : 2021/6/27
+# URL         : https://university.business-science.io/
 # ****************************************************************************
 
 
-# ゴール ----
+# ＜ゴール＞
 # MODELTIME 0.1.0のフレキシビリティを確認する
 # MODELTIMEを用いた時系列データ分析を確認する
 
-# OBJECTIVES ----
+
+# ＜目的＞
 # - Expedited Forecasting - Skip Calibrating / Refitting
 # - Working with In-Sample & Out-of-Sample Data
 # - NEW Residual Diagnositics
@@ -17,14 +21,14 @@
 
 # ＜目次＞
 # 0 準備
-# 1 EXPEDITED FORECASTING
-# 2 CALIBRATION (検証データの作成)
-# 3 RESIDUALS（残差分析）
+# 1 予測力を確認するためのテクニック
+# 2 柔軟にCalibrationを行う
+# 3 残差分析
 
 
 # 0 準備 ------------------------------------------------------------------------------
 
-# LIBRARIES ----------------------------------------------------------------
+# * ライブラリ ---------------------------------------------------------
 
 # Time Series ML
 library(tidymodels)
@@ -36,17 +40,18 @@ library(timetk)
 library(lubridate)
 
 
+# * データ準備 --------------------------------------------------------
 
-# DATA & ARTIFACTS --------------------------------------------------------
+# ディレクトリ設定
+setwd("course/advanced_timeseries")
 
 # データ準備
 feature_engineering_artifacts_list <-
   read_rds("00_models/feature_engineering_artifacts_list.rds")
 
-
 # データ取得
-data_prepared_tbl    <- feature_engineering_artifacts_list$data$data_prepared_tbl
-forecast_tbl         <- feature_engineering_artifacts_list$data$forecast_tbl
+data_prepared_tbl <- feature_engineering_artifacts_list$data$data_prepared_tbl
+forecast_tbl      <- feature_engineering_artifacts_list$data$forecast_tbl
 
 # データ確認
 data_prepared_tbl %>% glimpse()
@@ -70,38 +75,55 @@ splits <-
 
 # 確認
 splits %>% print()
+splits %>% training() %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
+splits %>% testing() %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
 
 
-# 1 EXPEDITED FORECASTING -----------------------------------------------------------------
+# 1 予測力を確認するためのテクニック --------------------------------------------------
 
-# * Model Time Table ----
-#   - Fitted on Full Dataset (No Train/Test)
+# ＜ポイント＞
+# - 学習期間のデータを使って予測してみる（予測力向上を促進するチェック方法として役立つ）
+# - 今回は｢予測｣がテーマなので、Calibration/Accuracy Testは行わない
+#   --- Train/Testでデータ分割せず、それらを合わせたデータを学習期間データとして使用
 
-# モデル定義1
-# --- Prophetモデル
+
+# * 準備 ----------------------------------------------------
+
+# データ確認
+# --- 学習期間データ（以下で使用するデータ）
+# --- 全期間のデータを使用している点に注意
+data_prepared_tbl %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
+
+
+# * 個別モデルの定義 ------------------------------------------
+
+# モデル1：Prophetモデル
+# --- 定義＆学習
+# --- 学習期間全体のデータで学習している点に注意
 model_fit_prophet <-
   prophet_reg(seasonality_yearly = TRUE) %>%
     set_engine("prophet") %>%
     fit(optins_trans ~ optin_time, data = data_prepared_tbl)
 
-
-# モデル定義2
-# --- ElasticNetモデル
+# モデル2：ElasticNetモデル
+# --- モデル定義
+# --- ワークフロー用なので学習なし
 model_spec_glmnet <-
   linear_reg(penalty = 0.1, mixture = 0.5) %>%
     set_engine("glmnet")
 
-
-# ワークフロー設定
-# --- モデル定義2を使用
-# --- {glmnet}は事前にエラー処理が必要
-# --- recipe_spec_2_lagにはエラー処理が入っている
+# モデル2：ElasticNetモデル
+# --- ワークフロー設定
+# --- 学習期間全体のデータで学習している点に注意
+# --- {glmnet}は事前にNA除外の処理が必要（recipe_spec_2_lagにはstep_rm()が入っている）
 workflow_fit_glmnet <-
   workflow() %>%
     add_model(model_spec_glmnet) %>%
     add_recipe(recipe_spec_2_lag) %>%
-    fit(data_prepared_tbl)
+    fit(data = data_prepared_tbl)
 
+
+# * モデルテーブル作成 -------------------------------------------
 
 # モデルテーブル作成
 # --- モデル定義1: Parsnipモデル
@@ -111,66 +133,99 @@ model_tbl <-
                   workflow_fit_glmnet)
 
 
+# * 予測の作成 --------------------------------------------------
 
-# * Make a Forecast ------------------------------------------------------------------------
+# データ確認
+# --- 学習期間（訓練データとテストデータの区別なし）
+# --- 予測期間（実際に予測する期間）
+forecast_tbl %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
+data_prepared_tbl %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
 
-#   - 信頼区間なし----
+
+# ** 学習期間と予測期間を分離 --------------
+
+# 予測データの作成
+# --- 各モデルから検証期間の予測を作成
+# --- new_data： 予測期間データ
+# --- actual_data： 学習期間データ
+df_forecast <-
+  model_tbl %>%
+    modeltime_forecast(new_data    = forecast_tbl,
+                       actual_data = data_prepared_tbl)
 
 # プロット作成
+# --- 信頼区間なし
+df_forecast %>%
+  plot_modeltime_forecast(.conf_interval_show = FALSE)
+
+
+# ** 学習期間のデータを予測 --------------
+
+# 予測データの作成
 # --- 各モデルから検証期間の予測を作成
-# --- new_data： 検証データ
-# --- actual_data： 全期間データ
-model_tbl %>%
-    modeltime_forecast(new_data    = forecast_tbl,
-                       actual_data = data_prepared_tbl) %>%
-    plot_modeltime_forecast()
+# --- new_data： 学習期間データ（予測期間データではない）
+# --- actual_data： 学習期間データ
+df_forecast_all <-
+  model_tbl %>%
+    modeltime_forecast(new_data    = data_prepared_tbl,
+                       actual_data = data_prepared_tbl)
 
 # プロット作成
 # --- 各モデルから全期間の予測を作成
 # --- new_data： 全期間データ
 # --- actual_data： 全期間データ
-model_tbl %>%
-    modeltime_forecast(new_data    = data_prepared_tbl,
-                       actual_data = data_prepared_tbl) %>%
-    plot_modeltime_forecast()
+df_forecast_all %>%
+  plot_modeltime_forecast(.conf_interval_show = FALSE)
 
 
 
-# 2 CALIBRATION (検証データの作成) ---------------------------------------------------
+# 2 柔軟にCalibrationを行う ----------------------------------------------------------
 
-# * Refitting for Train/Test ------------------------------------------------
+# ＜ポイント＞
+# - モデルテーブルの学習データを再定義して各モデルを再学習する（Refit）
+#   --- 学習期間の全体データから、訓練データに切り替える
+# - モデル精度の確認は｢テストデータ｣だけでなく｢訓練データ｣でやることにも意味がある
+#   --- modeltime_accuracy()はCalibrationで指定したデータ以外でも指定可能
 
-# 予測データの作成
-# --- リフィットの実行（訓練データに基づいて再度学習）
-# --- テストデータからモデル精度を評価するためのデータを作成
+
+# * Refitting for Train/Test ----------------------------------------
+
+# Calibration
+# --- 訓練データで再学習（学習期間の全体データで学習していた）
+# --- テストデータを用いてモデル評価のためのデータを作成
 calibration_tbl <-
   model_tbl %>%
     modeltime_refit(training(splits)) %>%
     modeltime_calibrate(testing(splits))
 
 
-# * Accuracy ----------------------------------------------------------------
+# * Accuracy --------------------------------------------------------
 
 # モデル精度の計測
 # --- 検証データ（Out-of-Sample）
+# --- Calibrationで設定したデータをそのまま使用
 calibration_tbl %>% modeltime_accuracy()
 
 # モデル精度の計測
 # --- 訓練データ（In-Sample）
-# --- フィッティング精度は検証データよりも当然高い
+# --- Calibrationと異なるデータを設定することも可能
+# --- フィッティング精度は検証データよりも当然高くなる
 calibration_tbl %>% 
     modeltime_accuracy(new_data = splits %>% training() %>% drop_na())
 
 
-# 3 RESIDUALS（残差分析） -------------------------------------------------------------------------
+# 3 残差分析 -------------------------------------------------------------------------
 
 # ＜ポイント＞
 # - 予測精度は残差を見ることで視覚的に確認することができる
-# - plot_modeltime_residuals()は以下の３パターンのプロット作成が可能
+# - 残差平均はゼロとなるべきで、個別モデル以外にアンサンブルでも同様のことがいえる
+# - 残差分析プロットであるplot_modeltime_residuals()は以下の３パターンの出力が可能
 #   --- timeplot
 #   --- acf
 #   --- seasonality
 
+
+# * 残差の計算 ------------------------------------------------------------
 
 # 残差の計算
 # --- 検証データ（Out-of-Sample）
@@ -186,7 +241,7 @@ residuals_in_tbl <-
     modeltime_residuals(new_data = training(splits) %>% drop_na())
 
 
-# * Time Plot ------------------------------------------------------------
+# * プロット1：Time Plot -----------------------------------------------------
 
 # プロット作成
 # --- 検証データ（Out-of-Sample）
@@ -201,7 +256,7 @@ residuals_in_tbl %>%
   plot_modeltime_residuals(.type = "timeplot")
 
 
-# * ACF Plot ---------------------------------------------------------------
+# * プロット2：ACF Plot ------------------------------------------------------
 
 # プロット作成
 # --- 検証データ（Out-of-Sample）
@@ -215,7 +270,7 @@ residuals_in_tbl %>%
     plot_modeltime_residuals(.type = "acf")
 
 
-# * Seasonality ------------------------------------------------------------
+# * プロット3：Seasonality -----------------------------------------------------
 
 # プロット作成
 # --- 検証データ（Out-of-Sample）
@@ -229,18 +284,17 @@ residuals_out_tbl %>%
     plot_modeltime_residuals(.type = "seasonality")
 
 
-
 # * Forecast ------------------------------------------------------------
 
+# データ確認
+# --- 学習期間の全体データ
+# --- テストデータ
+data_prepared_tbl %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
+splits %>% testing() %>% tk_index() %>% tk_get_timeseries_summary() %>% select(1:4)
+
 # プロット作成
-# --- In-Sample
-# --- 予測データの作成
+# --- インサンプルデータで予測
 calibration_tbl %>%
-    modeltime_forecast(
-        new_data = testing(splits),
-        actual_data = data_prepared_tbl
-    ) %>%
+    modeltime_forecast(new_data = testing(splits),
+                       actual_data = data_prepared_tbl) %>%
     plot_modeltime_forecast()
-
-
-

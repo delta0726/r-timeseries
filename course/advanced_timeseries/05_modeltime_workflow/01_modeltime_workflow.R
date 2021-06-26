@@ -42,7 +42,10 @@ library(lubridate)
 library(magrittr)
 
 
-# * データロード ---------------------------------------------------------
+# * データ準備 ---------------------------------------------------------
+
+# ディレクトリ設定
+setwd("course/advanced_timeseries")
 
 # データ準備
 feature_engineering_artifacts_list <-
