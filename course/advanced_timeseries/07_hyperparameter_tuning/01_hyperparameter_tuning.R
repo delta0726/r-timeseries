@@ -563,20 +563,20 @@ calibrate_and_plot(
 
 # 4 モデル保存 ----------------------------------------------
 
-# モデル整理
-set.seed(123)
-calibration_tbl <-
-  modeltime_table(wflw_fit_nnetar_tscv,
-                  wflw_fit_prophet_boost_kfold_rmse,
-                  wflw_fit_prophet_boost_kfold_rsq) %>%
-    modeltime_calibrate(testing(splits), quiet = FALSE)
-
-# モデル保存
-calibration_tbl %>%
-    write_rds("00_models/calibration_tbl_hyperparameter_tuning.rds")
-
-# 予測精度
-# --- 確認のみ
-calibration_tbl %>% modeltime_accuracy()
+# # モデル整理
+# set.seed(123)
+# calibration_tbl <-
+#   modeltime_table(wflw_fit_nnetar_tscv,
+#                   wflw_fit_prophet_boost_kfold_rmse,
+#                   wflw_fit_prophet_boost_kfold_rsq) %>%
+#     modeltime_calibrate(testing(splits), quiet = FALSE)
+#
+# # モデル保存
+# calibration_tbl %>%
+#     write_rds("00_models/calibration_tbl_hyperparameter_tuning.rds")
+#
+# # 予測精度
+# # --- 確認のみ
+# calibration_tbl %>% modeltime_accuracy()
 
 

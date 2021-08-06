@@ -1,48 +1,55 @@
 # ****************************************************************************
-# BUSINESS SCIENCE UNIVERSITY
-# DS4B 203-R: TIME SERIES FORECASTING FOR BUSINESS
-# MODULE: ARIMA MODELING
+# Title       : BUSINESS SCIENCE UNIVERSITY
+# Course      : DS4B 203-R: TIME SERIES FORECASTING FOR BUSINESS
+# Module      : ARIMA Modeling（8-1 to 8-5）
+# Created by  : Owner
+# Last Update : 2021/6/27
+# URL         : https://university.business-science.io/
 # ****************************************************************************
 
 
-# GOAL:
+# ＜ゴール＞
 # ARIMAモデルを理解する
 
-# OBJECTIVES ----
-# - 線形回帰モデルを使ってARIMAモデルの考え方を理解する
+
+# ＜目的＞
+# - 線形回帰モデルを使ってARIMAモデルの考え方を深める
 #   --- SARIMAモデルへの拡張（季節自己回帰和分移動平均モデル）
 #   --- SARIMAXモデルへの拡張（季節自己回帰和分移動平均モデル + 外部変数）
 # - ModeltimeでARIMAを作成
 # - ModeltimeでAuto ARIMAを作成
 
 
-# ＜ARIMAモデル＞
-# 概要:
-# - シンプルな線形回帰の概念に基づく予測モデル
-# - 非定常過程に対する時系列モデル
-#   --- ラグや差分を取ることで定常過程に変換している
-#   --- ARモデル/ARMAモデルなどはARIMAモデルを理解するための準備
-
-# メリット:
-# - 差分系列作成やラグ処理を自動的に行って予測する（フォーミュラで表現する必要なし）
-# - ハイパーパラメータを自動的にチューニングする (auto_arima)
-# - 1つの季節性をモデルに投入することができる
-
-# デメリット:
-# - デフォルトでは1つの季節性しか反映することができない (XREGs can help go beyond 1 seasonality)
-# - ラグが多すぎると予測が不安定になる
-# - パラメータサーチは高コストな処理（auto_arima）
-
-
 # ＜目次＞
-# 0 準備
+# 0-1 ARIMAモデルについて
+# 0-2 準備
 # 1 コンセプトの整理
 # 2 ARIMA
 # 3 AUTO ARIMA + XREGS(外部変数)
 # 4 モデル保存
 
 
-# 0 準備 -------------------------------------------------------------------------------
+# 0-1 ARIMAモデルについて ------------------------------------------------------------------
+
+# ＜概要＞
+# - シンプルな線形回帰の概念に基づく予測モデル
+# - 非定常過程に対する時系列モデル
+#   --- ラグや差分を取ることで定常過程に変換している
+#   --- ARモデル/ARMAモデルなどはARIMAモデルを理解するための準備
+
+# ＜メリット＞
+# - 差分系列作成やラグ処理を自動的に行って予測する（フォーミュラで表現する必要なし）
+# - ハイパーパラメータを自動的にチューニングする (auto_arima)
+# - 1つの季節性をモデルに投入することができる
+
+
+# ＜デメリット＞
+# - デフォルトでは1つの季節性しか反映することができない (XREGs can help go beyond 1 seasonality)
+# - ラグが多すぎると予測が不安定になる
+# - パラメータサーチは高コストな処理（auto_arima）
+
+
+# 0-2 準備 -------------------------------------------------------------------------------
 
 # * LIBRARIES & SETUP -------------------------------------------------
 
@@ -57,6 +64,9 @@ library(timetk)
 
 
 # * データ準備 ---------------------------------------------------------
+
+# ディレクトリ設定
+setwd("course/advanced_timeseries")
 
 # データロード
 artifacts_list <- read_rds("00_models/feature_engineering_artifacts_list.rds")
@@ -109,16 +119,23 @@ train_tbl %>% print()
 
 # ＜ポイント＞
 # - AR(Automated Regression)モデルは基本的にラグ系列を追加した線形回帰と同じ
+# - 現在の値は過去の自己系列の推移に依存しているという仮定を置いている
+#   --- 原系列をそのまま使用して過去との関係を探っている
+#   --- 期間数がパラメータとなる(order.maxの中で最適な値を決める)
 # - ARIMAモデルでもorder引数の(p, d, q)のうちdとqを0とすることで表現することができる
 
 # ヘルプ確認
 ?ar
 ?arima
 
+
+# ** ARモデルとARIMAモデル -----------------
+
 # ARモデル
 # --- 自己回帰モデル
 # --- stats::ar()
 # --- order.maxで回帰係数の数が決まる
+train_tbl$optins_trans %>% ar()
 train_tbl$optins_trans %>% ar(order.max = 3)
 
 # ARIMAモデル
@@ -127,9 +144,13 @@ train_tbl$optins_trans %>% ar(order.max = 3)
 fit_arima_ar <- train_tbl$optins_trans %>% arima(order = c(3, 0, 0))
 fit_arima_ar %>% print()
 
+
+# ** 線形回帰モデルとの関係性 -----------------
+
 # 計算証明
+# --- ARモデルは原系列の複数ラグを説明変数としたモデルである
 # --- 線形回帰から再現しているが完全一致はしていない
-# --- ラグ2又はラグ3の結果と一致
+# --- ARモデルの結果はlmのラグ2又はラグ3の結果と近くなる
 fit_lm_ar_2 <-
    lm(optins_trans ~ lag_vec(optins_trans, 1)
                    + lag_vec(optins_trans, 2),
@@ -146,7 +167,7 @@ fit_lm_ar_2 %>% tidy()
 fit_lm_ar_3 %>% tidy()
 
 
-# * 1期間の予測 ---------------------------------------------------------------
+# * ARモデルで1期間の予測 ----------------------------------------------------------
 
 # ＜ポイント＞
 # - predict()に整数値を与えることで予測期間を指定することができる
@@ -154,8 +175,10 @@ fit_lm_ar_3 %>% tidy()
 #   --- 予測に必要なorder数だけのXの値が必要
 
 # 予測値の計算
-# --- ARIMAモデル（3期間でモデリング）
-# --- 1期間先を予測
+# --- ARIMAモデル（3期間でモデリング、1期先を予測）
+# --- tsクラス
+# --- tibble変換
+fit_arima_ar %>% predict(1)
 fit_arima_ar %>% predict(1) %>% as_tibble()
 
 # データ確認
@@ -165,34 +188,42 @@ train_tbl %>% tail()
 # 予測値の計算
 # --- 回帰モデル
 # --- 直近3期間のデータが必要（2020-01-04 to 2020-01-06 + 1day）
-fit_lm_ar_3  %>%
-    predict(newdata = tibble(optins_trans = c(0.214, 0.968, 1.71, NA)))
+new_data <- tibble(optins_trans = c(0.214, 0.968, 1.71, NA))
+fit_lm_ar_3  %>% predict(newdata = new_data)
 
 
 # * 複数期間の予測（再帰的） -----------------------------------------
 
 # ＜ポイント＞
-# - predict()に整数値を与えることで予測期間を指定することができる
-#   --- 以下では3期間
-#   --- 予測値をインプットとして再帰的に使用している点に注意
-
+# - ARIMAモデルでは複数期間の予測を行うことができる
+#   --- 予測に用いるデータには直前の予測値が再帰的に使用される
 
 # 予測値の計算
 # --- ARIMAモデル
-# --- 3期間先を予測
+# --- 3期間先までを予測
+# --- 1 0.907
+# --- 2 0.766
+# --- 3 0.563
 fit_arima_ar %>% predict(3) %>% as_tibble()
 
 # 予測値の計算
 # --- 期間をずらして予測
-fit_lm_ar %>% predict(newdata = tibble(optins_trans = c(0.214, 0.968, 1.71, NA)))
-fit_lm_ar %>% predict(newdata = tibble(optins_trans = c(0.968, 1.71, 0.911, NA)))
-fit_lm_ar %>% predict(newdata = tibble(optins_trans = c(1.71, 0.911, 0.771, NA)))
+# --- 時期の予測には前期の予測値を使う
+m1 <- fit_lm_ar_3 %>% predict(newdata = tibble(optins_trans = c(0.214, 0.968, 1.71, NA)))
+m2 <- fit_lm_ar_3 %>% predict(newdata = tibble(optins_trans = c(0.968, 1.71, tail(m1, 1), NA)))
+m3 <- fit_lm_ar_3 %>% predict(newdata = tibble(optins_trans = c(1.71, tail(m1, 1), tail(m2, 1), NA)))
+
+# 確認
+m1 %>% print()
+m2 %>% print()
+m3 %>% print()
+
 
 
 # * Integration (I) ------------------------------------------------
 
 # ＜ポイント＞
-# - ARIMAモデルのI(Integration)は差分(d)を表している
+# - ARIMAモデルのI(Integration)は差分(diff)を表している
 #   --- order引数の(p, d, q)の｢d｣がIntegrationでコントロールされる個所
 #   --- 差分を取ることで非定常過程を定常過程に変換することを目指している
 
