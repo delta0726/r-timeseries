@@ -1,31 +1,17 @@
 # ***************************************************************************************
 # Library   : modeltime
-# Function  : prophet_reg
+# Function  : naive_reg
 # Created on: 2021/8/7
-# URL       : https://business-science.github.io/modeltime/reference/prophet_reg.html
+# URL       : https://business-science.github.io/modeltime/reference/naive_reg.html
 # ***************************************************************************************
 
 
 # ＜概要＞
-# - プロフェット回帰モデル
+# - NAIVE予測モデルの一般的なインターフェイス
 
 
 # ＜構文＞
-# prophet_reg(
-#   mode = "regression",
-#   growth = NULL,
-#   changepoint_num = NULL,
-#   changepoint_range = NULL,
-#   seasonality_yearly = NULL,
-#   seasonality_weekly = NULL,
-#   seasonality_daily = NULL,
-#   season = NULL,
-#   prior_scale_changepoints = NULL,
-#   prior_scale_seasonality = NULL,
-#   prior_scale_holidays = NULL,
-#   logistic_cap = NULL,
-#   logistic_floor = NULL
-# )
+# naive_reg(mode = "regression", id = NULL, seasonal_period = NULL)
 
 
 # ＜引数＞
@@ -33,8 +19,8 @@
 
 # ＜使用例＞
 # 0 準備
-# 1 モデル構築
-# 2 モデル学習
+# 1 NAIVE
+# 2 SEASONAL NAIVE
 
 
 # 0 準備 --------------------------------------------------------------------------------
@@ -58,18 +44,12 @@ m750 %>% print()
 splits <- m750 %>% initial_time_split(prop = 0.8)
 
 
-# 1 モデル構築 -------------------------------------------------------------------------
+# 1 NAIVE -----------------------------------------------------------------------------
 
 # モデル構築
 model_spec <-
-  prophet_reg() %>%
-    set_engine("prophet")
-
-# 確認
-model_spec %>% print()
-
-
-# 2 モデル学習 --------------------------------------------------------------------------
+  naive_reg() %>%
+    set_engine("naive")
 
 # 学習
 model_fit <-
@@ -77,4 +57,23 @@ model_fit <-
     fit(log(value) ~ date, data = training(splits))
 
 # 確認
+model_spec %>% print()
+model_fit %>% print()
+
+
+# 2 SEASONAL NAIVE ----------------------------------------------------------------------
+
+# モデル構築
+model_spec <-
+  naive_reg(id = "id",
+            seasonal_period = 12) %>%
+    set_engine("snaive")
+
+# 学習
+model_fit <-
+  model_spec %>%
+    fit(log(value) ~ date, data = training(splits))
+
+# 確認
+model_spec %>% print()
 model_fit %>% print()
