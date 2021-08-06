@@ -39,7 +39,7 @@ library(rsample)
 m750 <- m4_monthly %>% filter(id == "M750")
 
 # データ分割
-splits <- m750 %>% initial_time_split(prop = 0.9)
+splits <- initial_time_split(m750, prop = 0.9)
 
 
 # 1 モデル構築 ---------------------------------------------------------------------
