@@ -1,20 +1,25 @@
-# Title     :
-# Objective : TODO
-# Created by: Owner
-# Created on: 2020/8/23
-# URL       :
+# ***************************************************************************************
+# Library   : timetk
+# Function  : tk_zooreg
+# Created on: 2021/8/
+# URL       : https://business-science.github.io/timetk/reference/tk_zooreg.html
+# ***************************************************************************************
 
 
 
-# ＜ポイント＞
-
-
+# ＜概要＞
 
 
 
 # ＜構文＞
 
 
+
+# ＜引数＞
+
+
+
+# ＜使用例＞
 
 
 
