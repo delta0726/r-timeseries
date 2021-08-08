@@ -9,7 +9,6 @@
 # ＜概要＞
 # - 時系列データでリサンプリングデータを作成する
 #   --- 開始時点を複数ポイント設定してAnalysis/Assessmentのデータセットを複数生成する（｢2 可視化｣を参照）
-#   --- クロスセクションのリサンプリングは同じデータを使わないが、時系列では使わざるをえない
 
 
 # ＜構文＞
@@ -49,6 +48,7 @@ resamples_tscv <-
                    assess      = "2 years",
                    initial     = "5 years",
                    skip        = "2 years",
+                   cumulative  = FALSE, 
                    slice_limit = 4)
 
 
@@ -70,5 +70,20 @@ resamples_tscv %>%
     tk_time_series_cv_plan() %>%
     plot_time_series_cv_plan(.date_var = date,
                              .value = value,
-                             .facet_ncol  = 2,
+                             .facet_ncol  = 1,
                              .interactive = FALSE)
+
+# 参考：プロット作成
+# --- Cumulative=TRUEの場合
+m750 %>%
+  time_series_cv(date_var    = date,
+                 assess      = "2 years",
+                 initial     = "5 years",
+                 skip        = "2 years",
+                 cumulative  = TRUE, 
+                 slice_limit = 4) %>% 
+  tk_time_series_cv_plan() %>%
+  plot_time_series_cv_plan(.date_var = date,
+                           .value = value,
+                           .facet_ncol  = 1,
+                           .interactive = FALSE)
