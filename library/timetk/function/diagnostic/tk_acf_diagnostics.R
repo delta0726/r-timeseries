@@ -1,23 +1,28 @@
-# Title     : tk_acf_diagnostics
-# Objective : TODO
-# Created by: Owner
-# Created on: 2020/9/6
+# ***************************************************************************************
+# Library   : timetk
+# Function  : tk_acf_diagnostics
+# Created on: 2021/8/8
 # URL       : https://business-science.github.io/timetk/reference/tk_acf_diagnostics.html
-
+# ***************************************************************************************
 
 
 # ＜ポイント＞
-# - データフレームに含まれる日付列のサマリーを返す
-# - 日付列は最初の日付列を自動検知で見つけてくれる（列をメッセージ表示）
-#   --- 明示的に指定するとメッセージが表示されない
-
+# - 時系列データから自己相関(ACF)/偏自己相関(PACF)/相互相関(CCF)を計算する
+#   --- 全ての結果が1つのデータフレームに表示される
+ 
 
 # ＜構文＞
 # - tk_acf_diagnostics(.data, .date_var, .value, .ccf_vars = NULL, .lags = 1000)
 
 
+# ＜目次＞
+# 0 準備
+# 1 単一系列の計算
+# 2 複数系列の計算
+# 3 差分系列における計算
 
-# 1.使用例 ------------------------------------------------------------------------
+
+# 0 準備 ------------------------------------------------------------------------
 
 
 library(tidyverse)
@@ -26,33 +31,66 @@ library(timetk)
 
 
 # データ確認
-m4_monthly %>% print()
-m4_monthly %>% glimpse()
+# --- 4系列を含むデータセット
+FANG %>% print()
+FANG %>% group_by(symbol) %>% tally()
 
 
-# ACF分解
-# --- 単一系列
+# 1 単一系列の計算 -------------------------------------------------------------
+
+# 自己相関等の計算
+# --- 単一系列のみフィルタ
 FANG %>%
   filter(symbol == "FB") %>%
-  tk_acf_diagnostics(date, adjusted,                # ACF & PACF
-                     .ccf_vars = c(volume, close),  # CCFs
+  tk_acf_diagnostics(date, adjusted, 
+                     .ccf_vars = c(volume, close),　
                      .lags     = 500)
 
+# プロット確認
+FANG %>%
+  filter(symbol == "FB") %>%
+  plot_acf_diagnostics(date, adjusted, 
+                       .ccf_vars = c(volume, close),　
+                       .lags     = 500)
 
-# ACF分解
-# --- 複数系列
+
+# 2 複数系列の計算 -------------------------------------------------------------
+
+# 自己相関等の計算
+# --- 複数系列をグループ化
 FANG %>%
   group_by(symbol) %>%
   tk_acf_diagnostics(date, adjusted,
                      .ccf_vars = c(volume, close),
                      .lags     = "3 months")
 
-
-# ACF分解
-# --- 複数系列
+# プロット確認
 FANG %>%
   group_by(symbol) %>%
-  tk_acf_diagnostics(
-      date, diff_vec(adjusted),  # Apply differencing transformation
-      .lags = 0:500
-  )
+  plot_acf_diagnostics(date, adjusted, 
+                       .ccf_vars = c(volume, close),　
+                       .lags     = 500)
+
+
+# 3 差分系列における計算 ---------------------------------------------------------
+
+# ＜ポイント＞
+# - 検査する系列を差分系列に変換してから分析する
+
+
+# 自己相関等の計算
+# --- 差分系列の計算
+# --- 複数系列をグループ化
+FANG %>%
+  group_by(symbol) %>%
+  tk_acf_diagnostics(date, 
+                     diff_vec(adjusted), 
+                     .lags = 0:500)
+
+# プロット確認
+# --- 自己相関はほとんど消えている
+FANG %>%
+  group_by(symbol) %>%
+  plot_acf_diagnostics(date, 
+                       diff_vec(adjusted), 
+                       .lags = 0:500)
