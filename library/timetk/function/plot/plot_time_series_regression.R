@@ -1,8 +1,9 @@
-# Title     : plot_time_series_regression
-# Objective : TODO
-# Created by: Owner
-# Created on: 2020/9/5
+# ***************************************************************************************
+# Library   : timetk
+# Function  : plot_time_series_regression
+# Created on: 2021/8/11
 # URL       : https://business-science.github.io/timetk/reference/plot_time_series_regression.html
+# ***************************************************************************************
 
 
 # ＜ポイント＞
@@ -20,41 +21,45 @@
 #)
 
 
+# ＜目次＞
+# 0 準備
+# 1 単一系列の時系列回帰プロット
+# 2 複数系列の時系列回帰プロット
 
-# 1.準備 --------------------------------------------------------
 
-library(dplyr)
+# 0 準備 --------------------------------------------------------------
+
+# ライブラリ
+library(timetk)
+library(tidyverse)
 library(lubridate)
 
 
 # データ確認
 m4_monthly %>% print()
-
-# レコード件数
 m4_monthly %>% group_by(id) %>% tally()
 
 
+# 1 単一系列の時系列回帰プロット --------------------------------------
 
-# 2.時系列回帰プロット --------------------------------------------------------
-
-# 1系列
+# プロット作成
+# --- 単一系列
 m4_monthly %>%
   filter(id == "M750") %>%
-  plot_time_series_regression(
-      .date_var     = date,
-      .formula      = log(value) ~ as.numeric(date) + month(date, label = TRUE),
-      .show_summary = TRUE,
-      .facet_ncol   = 2,
-      .interactive  = FALSE
-  )
+  plot_time_series_regression(.date_var     = date, 
+                              .formula      = log(value) ~ as.numeric(date) + month(date, label = TRUE), 
+                              .show_summary = TRUE, 
+                              .facet_ncol   = 2, 
+                              .interactive  = FALSE)
 
 
-# 複数系列
+# 2 複数系列の時系列回帰プロット --------------------------------------
+
+# プロット作成
+# --- 複数系列
 m4_monthly %>%
-    group_by(id) %>%
-    plot_time_series_regression(
-        .date_var    = date,
-        .formula     = log(value) ~ as.numeric(date) + month(date, label = TRUE),
-        .facet_ncol  = 2,
-        .interactive = FALSE
-    )
+  group_by(id) %>%
+  plot_time_series_regression(.date_var    = date, 
+                              .formula     = log(value) ~ as.numeric(date) + month(date, label = TRUE), 
+                              .facet_ncol  = 2, 
+                              .interactive = FALSE)

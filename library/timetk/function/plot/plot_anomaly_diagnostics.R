@@ -1,14 +1,13 @@
-# Title     : plot_anomaly_diagnostics
-# Objective : TODO
-# Created by: Owner
-# Created on: 2020/8/23
+# ***************************************************************************************
+# Library   : timetk
+# Function  : plot_anomaly_diagnostics
+# Created on: 2021/8/8
 # URL       : https://business-science.github.io/timetk/reference/plot_anomaly_diagnostics.html
-
+# ***************************************************************************************
 
 
 # ＜ポイント＞
-
-
+# - 時系列データに異常値が含まれるかを可視化して確認する
 
 
 
@@ -43,11 +42,14 @@
 # )
 
 
+# ＜目次＞
+# 0 準備
+# 1 異常検知のプロット
 
 
+# 0 準備 --------------------------------------------------------------------
 
-# 1.準備 --------------------------------------------------------
-
+# ライブラリ
 library(dplyr)
 library(timetk)
 
@@ -55,21 +57,15 @@ library(timetk)
 
 # データ確認
 walmart_sales_weekly
+walmart_sales_weekly %>% group_by(id) %>% tally()
 
 
 # 使用データ
 walmart_sales_weekly %>% select(id, Date, Weekly_Sales)
 
 
-# レコード件数
-walmart_sales_weekly %>%
-  filter(id %in% c("1_1", "1_3")) %>%
-  group_by(id) %>%
-  tally()
 
-
-
-# 2.異常検知 --------------------------------------------------------
+# 1 異常検知のプロット -------------------------------------------------------
 
 # 異常検知
 # --- プロット出力

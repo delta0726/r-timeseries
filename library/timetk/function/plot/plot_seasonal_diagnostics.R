@@ -1,15 +1,14 @@
-# Title     : plot_seasonal_diagnostics
-# Objective : TODO
-# Created by: Owner
-# Created on: 2020/9/4
+# ***************************************************************************************
+# Library   : timetk
+# Function  : plot_seasonal_diagnostics
+# Created on: 2021/8/11
 # URL       : https://business-science.github.io/timetk/reference/plot_seasonal_diagnostics.html
+# ***************************************************************************************
 
 
 # ＜ポイント＞
-# - Seasonal-Trend-Loess分解による時系列データの分解を行う
-#   --- stats::stl()を実装したもの
-#   --- 観測系列から"season"と"trend"を抽出する
-# - ggplot2ベースなので追加的な操作も可能
+# - 時系列データの周期性(季節性)を確認する
+#   --- 明確な周期性パターンがないとインプリケーションは得にくい
 
 
 # ＜構文＞
@@ -29,62 +28,66 @@
 # )
 
 
+# ＜目次＞
+# 0 準備
+# 1 30分毎のデータ
+# 2 日次データ
 
 
+# 0 準備 ----------------------------------------------------------------------------
 
-
-# 1.準備 --------------------------------------------------------
-
+# ライブラリ
 library(tidyverse)
+library(tidyquant)
 library(timetk)
 
+
+# ローケール設定変更
+Sys.setlocale("LC_TIME", "English")
+
+
 # データ準備
+# --- 30分毎のデータ
+taylor_30_min %>% print()
+
+# データ準備
+# --- 日次データ
 data("FANG")
-
-# データ確認
-taylor_30_min %>% print()
 FB <- FANG %>% filter(symbol == "FB") %>% select(date, adjusted)
-
-# データ確認
-taylor_30_min %>% print()
 FB %>% print()
 
 
-# FBのみ抽出
-# --- 日次の株価データ
 
+# 1 30分毎のデータ -----------------------------------------------------------------
 
-
-
-# 2.30分毎のデータ --------------------------------------------------------
-
-# 原系列のプロット
+# プロット確認
+# --- 原系列
 taylor_30_min %>%
-    plot_time_series(.date = date,
-                     .value = value,
-                     .interactive = FALSE)
+  plot_time_series(.date = date, 
+                   .value = value, 
+                   .interactive = FALSE)
 
-
-# 複数系列でSTL分解
-# --- グループ化
-# Visualize seasonality
+# 季節性分解
 taylor_30_min %>%
-    plot_seasonal_diagnostics(.date = date,.value =  value, .interactive = FALSE)
+  plot_seasonal_diagnostics(.date = date, 
+                            .value =  value,
+                            .interactive = FALSE)
 
 
 
-# 2.日次データ --------------------------------------------------------
+# 2 日次データ --------------------------------------------------------------------
 
-# 原系列のプロット
+# プロット確認
+# --- 原系列
 FB %>%
-    plot_time_series(.date = date,
-                     .value = adjusted,
-                     .interactive = FALSE)
+  plot_time_series(.date = date, 
+                   .value = adjusted, 
+                   .interactive = FALSE)
 
 
-# 複数系列でSTL分解
-# --- グループ化
-# Visualize seasonality
-FB %>%
-    plot_seasonal_diagnostics(.date = date,.value = adjusted, .interactive = FALSE)
+# 季節性分解
+FB %>% 
+  plot_seasonal_diagnostics(.date = date, 
+                            .value = adjusted, 
+                            .interactive = FALSE)
 

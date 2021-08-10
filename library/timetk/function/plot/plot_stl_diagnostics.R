@@ -1,15 +1,15 @@
-# Title     : plot_stl_diagnostics
-# Objective : TODO
-# Created by: Owner
-# Created on: 2020/9/4
+# ***************************************************************************************
+# Library   : timetk
+# Function  : plot_stl_diagnostics
+# Created on: 2021/8/8
 # URL       : https://business-science.github.io/timetk/reference/plot_stl_diagnostics.html
+# ***************************************************************************************
 
 
 # ＜ポイント＞
 # - Seasonal-Trend-Loess分解による時系列データの分解を行う
 #   --- stats::stl()を実装したもの
 #   --- 観測系列から"season"と"trend"を抽出する
-# - ggplot2ベースなので追加的な操作も可能
 
 
 # ＜構文＞
@@ -34,9 +34,15 @@
 # )
 
 
+# ＜目次＞
+# 0 準備
+# 1 単一系列のSTL分解
+# 2 複数系列のSTL分解
 
-# 1.準備 --------------------------------------------------------
 
+# 0 準備 ----------------------------------------------------------------
+
+# ライブラリ
 library(tidyverse)
 library(timetk)
 
@@ -49,25 +55,28 @@ m4_hourly %>% group_by(id) %>% tally()
 
 
 
-# 2.基本的なチャート --------------------------------------------------------
+# 1 単一系列のSTL分解 ---------------------------------------------------
 
-# 1系列でSTL分解
+# プロット作成
+# --- STL分解
 m4_hourly %>%
   filter(id == "H10") %>%
-  plot_stl_diagnostics(
-      date, value,
-      .feature_set = c("observed", "season", "trend", "remainder"),
-      .frequency   = "24 hours",
-      .trend       = "1 week",
-      .interactive = FALSE)
+  plot_stl_diagnostics(.date_var    = date, 
+                       .value       = value, 
+                       .feature_set = c("observed", "season", "trend", "remainder"), 
+                       .frequency   = "24 hours", 
+                       .trend       = "1 week", 
+                       .interactive = FALSE)
 
 
-# 複数系列でSTL分解
-# --- グループ化
+# 2 複数系列のSTL分解 ---------------------------------------------------
+
+# プロット作成
+# --- STL分解
 m4_hourly %>%
   group_by(id) %>%
-  plot_stl_diagnostics(
-      date, value,
-      .feature_set = c("observed", "season", "trend"),
-      .interactive = FALSE)
+  plot_stl_diagnostics(.date_var    = date, 
+                       .value       = value, 
+                       .feature_set = c("observed", "season", "trend"),　
+                       .interactive = FALSE)
 
