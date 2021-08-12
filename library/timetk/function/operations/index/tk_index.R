@@ -1,9 +1,9 @@
-# Title     : tk_index
-# Objective : TODO
-# Created by: Owner
-# Created on: 2020/9/4
+# ***************************************************************************************
+# Library   : timetk
+# Function  : tk_index
+# Created on: 2021/8/13
 # URL       : https://business-science.github.io/timetk/reference/tk_index.html
-
+# ***************************************************************************************
 
 
 # ＜ポイント＞
@@ -12,16 +12,19 @@
 #   --- Arima、ets、およびHoltWintersクラスなどの関数オブジェクトからも日付抽出ができる
 
 
-
 # ＜構文＞
 # tk_index(data, timetk_idx = FALSE, silent = FALSE)
-#
-# has_timetk_idx(data)
 
 
+# ＜目次＞
+# 0 準備
+# 1 日付インデックスの取得
+# 2 tsオブジェクトの日付インデックス
 
-# 1.準備 --------------------------------------------------------------
 
+# 0 準備 --------------------------------------------------------------
+
+# ライブラリ
 library(tidyverse)
 library(timetk)
 
@@ -33,48 +36,23 @@ data_tbl <-
          y    = 5:1)
 
 
-# 確認
-data_tbl %>% print()
-data_tbl %>% glimpse()
+# 1 日付インデックスの取得 ------------------------------------------------
 
-
-#
-data_tbl %>% has_timetk_idx()
-
-
-
-
-# 2.データフレームからの抽出 ------------------------------------------------
-
-
-
-
-
-
-#
+# 日付インデックスの取得
 data_tbl %>% tk_index()
+tk_index(data_ts, timetk_idx = FALSE)
 
 
 
+# 2 tsオブジェクトの日付インデックス ---------------------------------------
 
-tk_index(data_tbl) # Returns time-based index vector#> [1] "2000-01-01" "2000-01-02" "2000-01-03" "2000-01-04" "2000-01-05"
-# Coerce to ts using tk_ts(): Preserves time-basis
-data_ts <- ata_tbl %>% tk_ts(d)#> Warning: Non-numeric columns being dropped: datetk_index(data_ts, timetk_idx = FALSE) # Returns regularized index#> [1] 1 2 3 4 5tk_index(data_ts, timetk_idx = TRUE)  # Returns original time-based index vector#> [1] "2000-01-01" "2000-01-02" "2000-01-03" "2000-01-04" "2000-01-05"
-# Coercing back to tbl
-data_ts %>% tk_tbl(timetk_idx = FALSE) # Returns regularized tbl#> Warning: Warning: No index to preserve. Object otherwise converted to tibble successfully.#> # A tibble: 5 x 2
-#>        x     y
-#>    <dbl> <dbl>
-#> 1  14.1      5
-#> 2  -7.95     4
-#> 3 -15.7      3
-#> 4 -10.4      2
-#> 5  10.2      1tk_tbl(data_ts, timetk_idx = TRUE)  # Returns time-based tbl#> # A tibble: 5 x 3
-#>   index           x     y
-#>   <date>      <dbl> <dbl>
-#> 1 2000-01-01  14.1      5
-#> 2 2000-01-02  -7.95     4
-#> 3 2000-01-03 -15.7      3
-#> 4 2000-01-04 -10.4      2
-#> 5 2000-01-05  10.2      1
+# tsオブジェクトの作成
+data_ts <- data_tbl %>% tk_ts()
 
+# 日付インデックスの取得
+data_ts %>% tk_index(timetk_idx = FALSE)
+data_ts %>% tk_index(timetk_idx = TRUE)
 
+# データフレームに変換
+data_ts %>% tk_tbl(timetk_idx = FALSE)
+data_ts %>% tk_tbl(timetk_idx = TRUE)
