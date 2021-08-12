@@ -1,13 +1,15 @@
-# Title     : summarise_by_time
-# Objective :
-# Created by: Owner
-# Created on: 2020/8/23
+# ***************************************************************************************
+# Library   : timetk
+# Function  : summarise_by_time
+# Created on: 2021/8/8
 # URL       : https://business-science.github.io/timetk/reference/summarise_by_time.html
+# ***************************************************************************************
 
 
 # ＜ポイント＞
-# - インデックスを用いて時系列の集計を行うことができる
-# - {dplyr}だと時間でgroup_by()をするが、summarise_by_time()では関数内でインデックスを指定する
+# - 日付インデックスを用いて時系列の集計を行うことができる
+#   --- グループとは別にパーティションが生成されて集計計算が行われる
+#   --- {dplyr}だと日付要素をmutateで抽出してからgroup_by()で集計する必要がある
 
 
 # ＜構文＞
@@ -16,7 +18,8 @@
 #   .date_var,
 #   .by = "day",
 #   ...,
-#   .type = c("floor", "ceiling", "round")
+#   .type = c("floor", "ceiling", "round"),
+#   .week_start = NULL
 # )
 
 
@@ -26,7 +29,13 @@
 # - ...       : 集計列と計算定義を指定
 
 
-# 1.準備 --------------------------------------------------------
+# ＜目次＞
+# 0 準備
+# 1 時系列サマリ
+# 2 年ごとに集計
+
+
+# 0 準備 ---------------------------------------------------------------------
 
 # Libraries
 library(timetk)
@@ -35,14 +44,10 @@ library(dplyr)
 
 # データ確認
 m4_daily %>% print()
-
-
-# グループ確認
 m4_daily %>% group_by(id) %>% tally()
 
 
-
-# 2.時系列サマリー -----------------------------------------------
+# 1 時系列サマリー -------------------------------------------------------------
 
 # 各月の最初の値で集計
 # --- dateは最初の日付で表示
@@ -50,8 +55,7 @@ m4_daily %>%
   group_by(id) %>%
   summarise_by_time(.date_var = date,
                     .by       = "month",
-                    value  = first(value))
-
+                    value     = first(value))
 
 
 # 各月の最初の値で集計
@@ -65,14 +69,13 @@ m4_daily %>%
 
 
 
-# 3.年ごとに集計 ----------------------------------------------------
+# 2 年ごとに集計 ----------------------------------------------------
 
 m4_daily %>%
   group_by(id) %>%
   summarise_by_time(.by = "year",
                     value = sum(value),
                     type = "ceiling")
-
 
 # 検証
 m4_daily %>%

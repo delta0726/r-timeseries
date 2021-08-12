@@ -1,12 +1,13 @@
-# Title     : mutate_by_time
-# Objective : TODO
-# Created by: Owner
-# Created on: 2020/9/5
+# ***************************************************************************************
+# Library   : timetk
+# Function  : mutate_by_time
+# Created on: 2021/8/8
 # URL       : https://business-science.github.io/timetk/reference/mutate_by_time.html
+# ***************************************************************************************
 
 
 # ＜ポイント＞
-# - 日付の期間単位の集計を行った列を追加する
+# - 日付インデックスに対して指定した期間単位でパーティションで区切って集計した列を追加する
 #   --- group_by()で日付列を集計しなくても集計計算ができる
 
 
@@ -26,9 +27,14 @@
 # - .type     : See lubridate::round_date.
 
 
+# ＜目次＞
+# 0 準備
+# 1 日付を意識した列追加
 
-# 1.準備 --------------------------------------------------------------
 
+# 0 準備 ------------------------------------------------------------------
+
+# ライブラリ
 library(timetk)
 library(dplyr)
 library(tidyr)
@@ -36,15 +42,24 @@ library(tidyr)
 
 # データ確認
 m4_daily %>% print()
-m4_daily %>% glimpse()
+m4_daily %>% group_by(id) %>% tally()
 
 
+# 1 日付を意識した列追加 ---------------------------------------------------
 
-# 2.1系列の時系列データ ---------------------------------------------------
 
-# 列の追加
-# --- 日付の期間単位に追加
-# --- 月初の値を追加
+# 計算イメージの確認
+# --- 特定列の月初の値を取得して列追加
+# --- 日付列(date)をグループ化しなくても計算できている
+m4_daily %>%
+  group_by(id) %>%
+  mutate_by_time(.date_var = date,
+                 .by       = "month",
+                 first_value_by_month  = first(value)) %>% 
+  print(n = 60)
+
+
+# 特定列の月初の値を取得して列追加
 m4_daily_first_by_month_tbl <-
   m4_daily %>%
     group_by(id) %>%
