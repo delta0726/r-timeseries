@@ -1,104 +1,90 @@
-# Title     : tk_make_timeseries
-# Objective : TODO
-# Created by: Owner
-# Created on: 2020/8/23
+# ***************************************************************************************
+# Library   : timetk
+# Function  : tk_make_timeseries
+# Created on: 2021/8/14
 # URL       : https://business-science.github.io/timetk/reference/tk_make_timeseries.html
-
+# ***************************************************************************************
 
 
 # ＜ポイント＞
-# - 指定した期間の日付ベクトルを作成する
-
-
+# - 元の日付ベクトルを元に、将来の日付ベクトルを生成する
+#   --- 開始日を指定しない点に注意
 
 
 # ＜構文＞
-# tk_make_timeseries(
-#   start_date,
-#   end_date,
-#   by,
-#   length_out = NULL,
-#   include_endpoints = TRUE,
+# tk_make_future_timeseries(
+#   idx,
+#   length_out,
+#   inspect_weekdays = FALSE,
+#   inspect_months = FALSE,
 #   skip_values = NULL,
-#   insert_values = NULL
+#   insert_values = NULL,
+#   n_future = NULL
 # )
 
 
+# ＜目次＞
+# 0 準備
+# 1 将来時間の取得
+# 2 将来日付の取得
+# 3 実践的な使用例
 
-# 1.準備 ------------------------------------------------------------------
 
+# 0 準備 -------------------------------------------------------------------------
+
+# ライブラリ
 library(dplyr)
 library(tidyquant)
 library(timetk)
 
 
+# 時間ベクトルの作成
+# --- これを基準に将来日付を生成する
+idx_sec <- tk_make_timeseries(start_date = "2016-01-01 00:00:00", by = "3 sec", length_out = 3)
+idx_sec
 
-# 2.単純な日付出力 ------------------------------------------------------------------
-
-# 日付で期間指定
-tk_make_timeseries(start_date = "2017-01-01", end_date = "2017-12-31")
-
-
-# 年のみ指定
-tk_make_timeseries(start_date = "2017")
-
-
-# 年月を指定
-tk_make_timeseries(start_date = "2017-02")
+# 日付ベクトルの作成
+# --- これを基準に将来日付を生成する
+idx_day <- tk_make_timeseries(start_date = "2016-01-01", by = "1 month", length_out = "12 months")
+idx_day
 
 
+# 1 将来時間の取得 ----------------------------------------------------------------
 
-# 3.ベクトルの長さを指定 ------------------------------------------------------------------
+# 要素数で指定
+idx_sec %>% tk_make_future_timeseries(length_out = 3)
 
-# 年のみ指定
-# --- ベクトルの長さを指定
-tk_make_timeseries(start_date = "2012", length_out = 6)
-
-
-# 年のみ指定
-# --- 頻度とベクトルの長さを指定
-tk_make_timeseries(start_date = "2012", by = "1 month", length_out = 6)
+# 期間キーワードで指定
+idx_sec %>% tk_make_future_timeseries(length_out = "6 sec")
 
 
+# 2 将来日付の取得 ----------------------------------------------------------------
 
-# 4.長さをキーワードで指定 ------------------------------------------------------------------
+# 要素数で指定
+idx_day %>% tk_make_future_timeseries(length_out = 3)
 
-# 期間をlength outで指定
-tk_make_timeseries(start_date = "2012", by = "1 month",
-                   length_out = "1 year 6 months", include_endpoints = FALSE)
-
-
-# End Pointも出力
-tk_make_timeseries(start_date = "2012", by = "1 month",
-                   length_out = "1 year 6 months", include_endpoints = TRUE)
+# 期間キーワードで指定
+idx_day %>% tk_make_future_timeseries(length_out = "12 months")
 
 
-tk_make_timeseries(end_date = "2012-01-01", by = "1 month",
-                   length_out = "1 year 6 months", include_endpoints = FALSE)
+# 3 実践的な使用例 ----------------------------------------------------------------
 
+# データ準備
+FB_tbl <- FANG %>% filter(symbol == "FB")
 
+# データ確認
+FB_tbl %>% print()
+FB_tbl %>% tk_summary_diagnostics() %>% select(1:4)
 
-# 4.時間ベクトルの出力 ------------------------------------------------------------------
+# 休日ベクトルの取得
+holidays <- tk_make_holiday_sequence(start_date = "2017-01-01",
+                                     end_date   = "2017-12-31",
+                                     calendar   = "NYSE")
 
-
-tk_make_timeseries("2016-01-01 01:01:02", "2016-01-01 01:01:04")
-
-
-tk_make_timeseries("2017-01-01", "2017-01-02", by = "10 min")
-
-
-tk_make_timeseries("2017-01-01", by = "30 min", length_out = "6 hours")
-
-
-tk_make_timeseries("2012-01-01", by = "1 month",
-                   length_out = "12 months",
-                   include_endpoints = FALSE) # Removes unnecessary last value
-
-
-tk_make_timeseries(
-    "2011-01-01", length_out = 5,
-    skip_values   = "2011-01-05",
-    insert_values = "2011-01-06"
-)
-
-
+# 将来日付のベクトルを取得
+# --- 元データは2016-12-30まで
+FB_tbl %>%
+  tk_index() %>%
+  tk_make_future_timeseries(length_out       = "1 month",
+                            inspect_weekdays = TRUE,
+                            skip_values      = holidays)
