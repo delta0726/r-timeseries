@@ -1,38 +1,36 @@
-# Title     : ts_clean_vec
-# Objective : TODO
-# Created by: Owner
-# Created on: 2020/9/5
-# URL       : https://business-science.github.io/timetk/reference/ts_clean_vec.html
+# ***************************************************************************************
+# Library   : timetk
+# Function  : tk_get_holidays_by_year
+# Created on: 2021/8/14
+# URL       : https://business-science.github.io/timetk/reference/tk_get_holiday.html
+# ***************************************************************************************
 
 
-
-# ＜ポイント＞
-# - データフレームにTimeseries Signatureを追加する
-#   --- tk_get_timeseries_signature()は日付インデックスを引数とする点で異なる
+# ＜概要＞
+# - 休日一覧テーブルを取得する
 
 
 # ＜構文＞
-# ts_clean_vec(x, period = 1, lambda = NULL)
+# tk_get_holidays_by_year(years = year(today()))
 
 
+# ＜目次＞
+# 0 準備
+# 1 休日一覧テーブルの取得
 
 
-# 1.使用例 ----------------------------------------------------------
+# 0 準備 ------------------------------------------------------------
 
+# ライブラリ
 library(dplyr)
 library(timetk)
 
 
-# --- VECTOR ----
+# 1 休日一覧テーブルの取得 ---------------------------------------------
 
-# データ準備
-values <- c(1,2,3, 4*2, 5,6,7, NA, 9,10,11, 12*2)
-values
+# 休日一覧をテーブル抽出
+tk_get_holidays_by_year(2020)
 
-
-
-values %>% ts_clean_vec(period = 1, lambda = NULL)
-
-values %>% ts_clean_vec(period = 4, lambda = NULL)
-
-values %>% ts_clean_vec(period = 4, lambda = "auto")
+# 特定のカレンダーに絞り込み
+tk_get_holidays_by_year(2020) %>%
+    filter(holiday_name %>% str_detect("US_"))

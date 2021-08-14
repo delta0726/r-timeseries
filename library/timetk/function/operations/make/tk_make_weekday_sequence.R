@@ -34,6 +34,10 @@ library(dplyr)
 library(tidyquant)
 library(timetk)
 
+# ローケール設定変更
+# --- 日付を扱うものではローケールをEnglishにしておくほうがよい
+Sys.setlocale("LC_TIME", "English")
+
 
 # 1 平日ベクトルの取得 ------------------------------------------------------------------
 

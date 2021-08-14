@@ -30,7 +30,6 @@ library(timetk)
 # ローケール設定変更
 # --- 英語の曜日表記で判定するため
 Sys.setlocale("LC_TIME", "English")
-Sys.getlocale("LC_TIME")
 
 
 # 1 週末ベクトルの取得 --------------------------------------------------

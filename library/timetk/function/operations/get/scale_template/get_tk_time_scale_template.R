@@ -1,23 +1,32 @@
-# Title     : get_tk_time_scale_template
-# Objective : TODO
-# Created by: Owner
-# Created on: 2020/9/4
+# ***************************************************************************************
+# Library   : timetk
+# Function  : get_tk_time_scale_template
+# Created on: 2021/8/8
 # URL       : https://business-science.github.io/timetk/reference/tk_time_scale_template.html
-
+# ***************************************************************************************
 
 
 # ＜ポイント＞
+# - 日付に対するトレンド分析等の頻度を指定
 # - タイムスケールテンプレートはtk_get_frequency()やtk_get_trend()でperiod="auto"とした際に利用される
-# - ライブラリの中で定義されたテーブルを取得している
-
 
 
 # ＜構文＞
 # get_tk_time_scale_template()
 
 
+# ＜目次＞
+# 0 準備
+# 1 テンプレート確認
 
-# 使用例 --------------------------------------------------------
 
-# テンプレートの取得
+# 0 準備 ---------------------------------------------------------------------
+
+# ライブラリ
+library(timetk)
+
+
+# 1 テンプレート確認 ----------------------------------------------------------
+
+# 確認
 get_tk_time_scale_template()

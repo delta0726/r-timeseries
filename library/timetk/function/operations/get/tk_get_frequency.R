@@ -1,62 +1,51 @@
-# Title     : tk_get_frequency
-# Objective : TODO
-# Created by: Owner
-# Created on: 2020/8/23
+# ***************************************************************************************
+# Library   : timetk
+# Function  : tk_get_frequency
+# Created on: 2021/8/14
 # URL       : https://business-science.github.io/timetk/reference/tk_get_frequency.html
+# ***************************************************************************************
 
 
-
-# ＜ポイント＞
-
-
-
+# ＜概要＞
+# - 日付インデックスの頻度に対する1つ上の頻度を取得する
+#   --- 日次の場合は週次
+#   --- 周期性分析で使用する
 
 
 # ＜構文＞
 # tk_get_frequency(idx, period = "auto", message = TRUE)
 
 
+# ＜目次＞
+# 0 準備
+# 1 頻度の取得
 
 
-# 1.準備 -----------------------------------------------------------------------
+# 0 準備 -----------------------------------------------------------------------
 
-
+# ライブラリ
 library(tidyverse)
 library(tidyquant)
 library(timetk)
 
 
 # データ準備
-data("FANG")
-
-
-# データ確認
-FANG %>% print()
-FANG %>% glimpse()
-
-
-# デイリーデータ
-# --- FBのみ抽出
+# --- 日付ベクトルの取得
 idx_FB <- FANG %>% filter(symbol == "FB") %>% pull(date)
-idx_FB %>% print()
-
-
-
-# 2.使用例 ----------------------------------------------------------------
-
-
-# Automated Frequency Calculation
-idx_FB %>% tk_get_frequency(period = "auto")
-
-
-# Automated Trend Calculation
-idx_FB %>% tk_get_trend(period = "auto")
-
-
-# Manually Override Trend
-idx_FB %>% tk_get_trend(period = "1 year")
-
-
+idx_FB
 
 # 時間テンプレートの確認
+# --- デフォルトのfrequency期間はテンプレートで管理されている
+# --- 元データに対して1つ上の単位が適用される
 get_tk_time_scale_template()
+
+
+# 1 頻度の取得 -------------------------------------------------------------------
+
+# 頻度の取得
+# --- テンプレートから取得
+idx_FB %>% tk_get_frequency(period = "auto")
+
+# 頻度の取得
+# --- テンプレートから取得
+idx_FB %>% tk_get_frequency(period = "month")
